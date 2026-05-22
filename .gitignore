@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Web build output
+dist/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Vite generated JS declarations from config builds
+vite.config.js
+vite.config.d.ts
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Android / Gradle generated files
+android/.gradle/
+android/build/
+android/**/build/
+android/local.properties
+android/*.iml
+android/.idea/
+android/capacitor-cordova-android-plugins/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/app/src/main/res/xml/config.xml
+*.apk
+*.aab
+*.aar
