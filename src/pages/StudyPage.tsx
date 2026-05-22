@@ -78,7 +78,7 @@ export default function StudyPage() {
   const summaryRef = useRef(summary);
 
   const currentWord = queue[currentIndex];
-  const stackWords = queue.slice(currentIndex + 1, currentIndex + 6);
+  const stackWords = queue.slice(currentIndex + 1, currentIndex + 7);
   const currentProgress = currentWord ? progressMap[currentWord.id] : null;
   const visibleProgress = Math.min(queue.length, Math.max(currentIndex + 1, summary.studiedCount + 1));
 
@@ -252,7 +252,12 @@ export default function StudyPage() {
       />
 
       {recall && Date.now() < recall.expiresAt ? (
-        <button className="recall-toast" type="button" onClick={() => undoEntry(recall, { restoreToCurrent: true })}>
+        <button
+          className="recall-toast"
+          key={recall.result.logId}
+          type="button"
+          onClick={() => undoEntry(recall, { restoreToCurrent: true })}
+        >
           <RotateCcw size={16} />
           <span>{recall.word.word}</span>
           <strong>{recall.word.meaning}</strong>

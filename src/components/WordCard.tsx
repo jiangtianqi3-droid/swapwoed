@@ -644,9 +644,9 @@ export default function WordCard({
         }`}
         aria-hidden="true"
       >
-        {stackWords.slice(0, 5).map((stackWord, index) => (
+        {stackWords.slice(0, 6).map((stackWord, index) => (
           <article
-            className={`stack-card word-face ${index === 0 ? "next" : ""}`}
+            className={`stack-card word-face ${index === 0 ? "next" : ""} ${index >= 5 ? "tail-incoming" : ""}`}
             key={`${stackWord.id}-${index}`}
             style={
               {
@@ -656,7 +656,7 @@ export default function WordCard({
               } as React.CSSProperties
             }
           >
-            {index === 0 ? <FrontWordContent word={stackWord} /> : null}
+            <FrontWordContent word={stackWord} />
           </article>
         ))}
       </div>
