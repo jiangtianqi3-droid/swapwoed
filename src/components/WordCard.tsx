@@ -609,8 +609,18 @@ export default function WordCard({
       : 0;
   const answerRotation = clamp(answerDrag.x / 28, -7, 7);
   const answerCorner = isHesitatingRight && (phase === "rightHesitating" || phase === "verticalPeekingFromRight") ? 1 : 0;
-  const answerCornerFromTop = stackDrag.y > RIGHT_HESITATE_START && stackDrag.y > Math.abs(stackDrag.x) * 0.72;
-  const answerCornerSide = stackDrag.x < 0 ? 1 : -1;
+  const hesitationEdgeSource =
+    phase === "rightHesitating" || phase === "verticalPeekingFromRight"
+      ? hesitationOriginRef.current
+      : stackDrag;
+  const answerCornerHasHorizontal =
+    Math.abs(hesitationEdgeSource.x) > RIGHT_HESITATE_START &&
+    Math.abs(hesitationEdgeSource.x) >= Math.max(12, hesitationEdgeSource.y * 0.72);
+  const answerCornerFromTop =
+    !answerCornerHasHorizontal &&
+    hesitationEdgeSource.y > RIGHT_HESITATE_START &&
+    hesitationEdgeSource.y > Math.abs(hesitationEdgeSource.x) * 0.72;
+  const answerCornerSide = hesitationEdgeSource.x < 0 ? 1 : -1;
   const isPromotingStack =
     (phase === "exiting" && (targetRef.current === "word" || targetRef.current === "answer")) ||
     phase === "dismissPeekedAnswer" ||
