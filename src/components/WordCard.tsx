@@ -357,10 +357,17 @@ export default function WordCard({
   };
 
   const moveWordCards = (rawX: number, rawY: number) => {
-    if (Math.max(Math.abs(rawX), Math.abs(rawY)) <= DEAD_ZONE) return;
-
     const absX = Math.abs(rawX);
     const absY = Math.abs(rawY);
+    const withinDeadZone = Math.max(absX, absY) <= DEAD_ZONE;
+    if (withinDeadZone && answerMotionModeRef.current === "undecided") {
+      setPhase("horizontalDragging");
+      setWordDrag({ x: rawX, y: rawY });
+      setStackDrag({ x: 0, y: 0 });
+      setPeekOffset(0);
+      return;
+    }
+
     const startsRight = rawX > DEAD_ZONE && rawX > absY * 0.45;
     const startsUp = rawY < -DEAD_ZONE && absY > absX * 0.45;
     const startsFollow = startsRight || startsUp;
