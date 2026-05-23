@@ -435,10 +435,6 @@ a {
   animation: dealStackSpread 420ms cubic-bezier(0.18, 0.86, 0.18, 1) backwards;
 }
 
-.stack-preview.is-promoting {
-  transform: scale(1.012);
-}
-
 .stack-preview.answer-return-target {
   z-index: 3;
 }
