@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BookmarkCheck, Check, CircleHelp, X } from "lucide-react";
+import { exampleTranslations } from "../data/exampleTranslations";
 import type { AppSettings } from "../models/Settings";
 import type { UserWordProgress } from "../models/UserWordProgress";
 import type { Word } from "../models/Word";
@@ -78,17 +79,30 @@ const wordTitleSize = (text: string) => {
   return "clamp(1.35rem, 5.8vw, 2.05rem)";
 };
 
-const AnswerContent = ({ word, settings }: { word: Word; settings: AppSettings }) => (
+const AnswerContent = ({ word, settings }: { word: Word; settings: AppSettings }) => {
+  const example = word.examples[0];
+  const exampleTranslation = exampleTranslations[word.id];
+
+  return (
   <>
     <div className="word-back-header">
       <div>
+        <div className="answer-word-line">
+          <strong>{word.word}</strong>
+          <span>{word.phonetic}</span>
+        </div>
         <h2>{word.meaning}</h2>
         <p>{word.partOfSpeech}</p>
       </div>
     </div>
 
     {settings.showDefinition && word.definition ? <p className="definition">{word.definition}</p> : null}
-    {settings.showExamples && word.examples.length > 0 ? <blockquote>{word.examples[0]}</blockquote> : null}
+    {settings.showExamples && example ? (
+      <blockquote>
+        <span>{example}</span>
+        {exampleTranslation ? <cite>{exampleTranslation}</cite> : null}
+      </blockquote>
+    ) : null}
 
     <div className="detail-grid">
       {word.collocations?.length ? (
@@ -111,7 +125,8 @@ const AnswerContent = ({ word, settings }: { word: Word; settings: AppSettings }
       ) : null}
     </div>
   </>
-);
+  );
+};
 
 const FrontWordContent = ({ word, interactive, settings }: { word: Word; interactive?: boolean; settings?: AppSettings }) => (
   <div className="word-main">
@@ -616,18 +631,13 @@ export default function WordCard({
       : 0;
   const answerRotation = clamp(answerDrag.x / 28, -7, 7);
   const answerCorner = isHesitatingRight && (phase === "rightHesitating" || phase === "verticalPeekingFromRight") ? 1 : 0;
-  const hesitationEdgeSource =
-    phase === "rightHesitating" || phase === "verticalPeekingFromRight"
-      ? hesitationOriginRef.current
-      : stackDrag;
-  const answerCornerHasHorizontal =
-    Math.abs(hesitationEdgeSource.x) > RIGHT_HESITATE_START &&
-    Math.abs(hesitationEdgeSource.x) >= Math.max(12, hesitationEdgeSource.y * 0.72);
   const answerCornerFromTop =
-    !answerCornerHasHorizontal &&
-    hesitationEdgeSource.y > RIGHT_HESITATE_START &&
-    hesitationEdgeSource.y > Math.abs(hesitationEdgeSource.x) * 0.72;
-  const answerCornerSide = hesitationEdgeSource.x < 0 ? 1 : -1;
+    answerCorner > 0 &&
+    Math.abs(stackDrag.x) < RIGHT_HESITATE_START &&
+    stackDrag.y > RIGHT_HESITATE_START;
+  const answerCornerX = answerCornerFromTop ? 0 : clamp(-stackDrag.x * 0.24, -18, 18) * answerCorner;
+  const answerCornerY = answerCornerFromTop ? -18 * answerCorner : 0;
+  const answerCornerRotate = answerCornerFromTop ? 0 : (answerCornerX / 18) * 2.8;
   const isPromotingStack =
     (phase === "exiting" && (targetRef.current === "word" || targetRef.current === "answer")) ||
     phase === "dismissPeekedAnswer" ||
@@ -693,9 +703,9 @@ export default function WordCard({
                 "--answer-drag-x": `${answerDrag.x}px`,
                 "--answer-drag-y": `${answerDrag.y}px`,
                 "--answer-rotate": `${answerRotation}deg`,
-                "--answer-corner-x": `${answerCornerFromTop ? 0 : 16 * answerCornerSide * answerCorner}px`,
-                "--answer-corner-y": `${answerCornerFromTop ? -18 * answerCorner : 0}px`,
-                "--answer-corner-rotate": `${answerCornerFromTop ? 0 : 2.8 * answerCornerSide * answerCorner}deg`,
+                "--answer-corner-x": `${answerCornerX}px`,
+                "--answer-corner-y": `${answerCornerY}px`,
+                "--answer-corner-rotate": `${answerCornerRotate}deg`,
                 "--answer-peek-y": `${-peekOffset}px`,
                 "--answer-scale": isReturningAnswer ? 0.72 : 1,
               } as React.CSSProperties

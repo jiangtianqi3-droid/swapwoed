@@ -795,15 +795,40 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
+}
+
+.answer-word-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.answer-word-line strong {
+  overflow: hidden;
+  color: #1f2a3d;
+  font-size: clamp(1rem, 4.4vw, 1.34rem);
+  font-weight: 900;
+  text-overflow: ellipsis;
+}
+
+.answer-word-line span {
+  flex: 0 1 auto;
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
 }
 
 .word-back-header h2 {
   display: -webkit-box;
-  margin: 0 0 6px;
+  margin: 0 0 5px;
   overflow: hidden;
   color: #111a2a;
-  font-size: 1.24rem;
+  font-size: 1.18rem;
   line-height: 1.18;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -825,18 +850,35 @@ a {
 }
 
 blockquote {
-  margin: 10px 0;
-  padding: 10px 11px;
+  display: block;
+  margin: 8px 0;
+  padding: 9px 10px;
+  overflow: hidden;
   color: #24324a;
   background: #f4f7fc;
   border-left: 4px solid #2d78d4;
   border-radius: 6px;
   font-size: 0.84rem;
   line-height: 1.38;
+}
+
+blockquote span {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
+}
+
+blockquote cite {
+  display: -webkit-box;
+  margin-top: 5px;
+  overflow: hidden;
+  color: #66758c;
+  font-size: 0.78rem;
+  font-style: normal;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .detail-grid {
