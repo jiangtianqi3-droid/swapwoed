@@ -66,7 +66,8 @@ export const speakText = (text: string, accent: AppSettings["accent"], rate = 0.
   window.speechSynthesis.speak(utterance);
 };
 
-export const speakWord = (word: string, accent: AppSettings["accent"]) => speakText(word, accent, 0.88);
+export const speakWord = (word: string, accent: AppSettings["accent"], rate: AppSettings["speechRate"] = 1) =>
+  speakText(word, accent, rate);
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
@@ -105,19 +106,19 @@ const AnswerContent = ({ word, settings }: { word: Word; settings: AppSettings }
     ) : null}
 
     <div className="detail-grid">
-      {word.collocations?.length ? (
+      {settings.showCollocations && word.collocations?.length ? (
         <div>
           <span>常见搭配</span>
           <p>{word.collocations.slice(0, 2).join(" / ")}</p>
         </div>
       ) : null}
-      {word.synonyms?.length ? (
+      {settings.showSynonyms && word.synonyms?.length ? (
         <div>
           <span>近义词</span>
           <p>{word.synonyms.slice(0, 3).join(" / ")}</p>
         </div>
       ) : null}
-      {word.memoryHint ? (
+      {settings.showMemoryHint && word.memoryHint ? (
         <div>
           <span>记忆提示</span>
           <p>{word.memoryHint}</p>
@@ -137,7 +138,7 @@ const FrontWordContent = ({ word, interactive, settings }: { word: Word; interac
         style={{ fontSize: wordTitleSize(word.word) }}
         onClick={(event) => {
           event.stopPropagation();
-          speakWord(word.word, settings.accent);
+          if (settings.tapWordPronounce) speakWord(word.word, settings.accent, settings.speechRate);
         }}
       >
         {word.word}
@@ -147,7 +148,7 @@ const FrontWordContent = ({ word, interactive, settings }: { word: Word; interac
         {word.word}
       </div>
     )}
-    <p>{word.phonetic}</p>
+    {!settings || settings.showPhonetic ? <p>{word.phonetic}</p> : null}
   </div>
 );
 
@@ -242,8 +243,8 @@ export default function WordCard({
   }, [word.id]);
 
   useEffect(() => {
-    if (settings.autoPronounce) speakWord(word.word, settings.accent);
-  }, [settings.accent, settings.autoPronounce, word.word]);
+    if (settings.autoPronounce) speakWord(word.word, settings.accent, settings.speechRate);
+  }, [settings.accent, settings.autoPronounce, settings.speechRate, word.word]);
 
   useEffect(
     () => () => {
@@ -600,7 +601,7 @@ export default function WordCard({
     if (dragExceededRef.current || wordHidden) return;
     const now = performance.now();
 
-    if (now - lastTapTimeRef.current <= DOUBLE_TAP_MS) {
+    if (settings.doubleTapFavorite && now - lastTapTimeRef.current <= DOUBLE_TAP_MS) {
       clearClickTimer();
       lastTapTimeRef.current = 0;
       onToggleFavorite();
@@ -647,7 +648,7 @@ export default function WordCard({
   const isDealing = phase === "dealing";
 
   return (
-    <div className="word-card-wrap">
+    <div className={`word-card-wrap text-${settings.cardTextSize}`}>
       <div
         className={`stack-preview ${isDealing ? "is-dealing" : ""} ${isPromotingStack ? "is-promoting" : ""} ${
           isReturningAnswer ? "answer-return-target" : ""
@@ -769,7 +770,7 @@ export default function WordCard({
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    speakText(word.examples[0], settings.accent, 0.92);
+                    if (settings.tapExamplePronounce) speakText(word.examples[0], settings.accent, settings.speechRate);
                   }}
                 >
                   {word.examples[0]}

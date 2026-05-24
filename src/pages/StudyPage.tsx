@@ -180,7 +180,7 @@ export default function StudyPage() {
 
   const onCardAction = (action: CardStudyAction) => {
     if (action === "rightKnown") {
-      recordSwipe("right", { advance: true, countedInSummary: true, allowRecall: true });
+      recordSwipe("right", { advance: true, countedInSummary: true, allowRecall: settings.rightSwipeRecallBar });
       return;
     }
 
@@ -251,7 +251,7 @@ export default function StudyPage() {
         onToggleFavorite={onToggleFavorite}
       />
 
-      {recall && Date.now() < recall.expiresAt ? (
+      {settings.rightSwipeRecallBar && recall && Date.now() < recall.expiresAt ? (
         <button
           className="recall-toast"
           key={recall.result.logId}
@@ -264,11 +264,13 @@ export default function StudyPage() {
         </button>
       ) : null}
 
-      <div className="gesture-ghost" aria-hidden="true">
-        <span>←────</span>
-        <i />
-        <span>────→</span>
-      </div>
+      {settings.bottomGestureHint ? (
+        <div className="gesture-ghost" aria-hidden="true">
+          <span>←────</span>
+          <i />
+          <span>────→</span>
+        </div>
+      ) : null}
     </div>
   );
 }
