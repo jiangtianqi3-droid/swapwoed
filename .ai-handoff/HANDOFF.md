@@ -27,11 +27,11 @@ Started At: 2026-05-27 15:00 +08:00
 Last Updated: 2026-05-27 15:00 +08:00
 Current Task: Build current SwipeWord debug APK, commit current source/APK changes, and push to GitHub.
 Files Touched: .ai-handoff/HANDOFF.md; artifacts/SwipeWord-debug.apk; src/App.tsx; src/components/StudyProgressMarks.tsx; src/components/WordCard.tsx; src/components/settings/ConfirmDialog.tsx; src/components/settings/SettingsSegmented.tsx; src/components/settings/SettingsStepper.tsx; src/data/defaultWordBooks.ts; src/data/downloadedWords.ts; src/data/wordBooks/index.ts; src/data/words.ts; src/models/GestureFeedbackState.ts; src/models/Settings.ts; src/models/StudySession.ts; src/models/Word.ts; src/pages/SettingsPage.tsx; src/pages/StudyPage.tsx; src/pages/WordBookPage.tsx; src/services/statisticsService.ts; src/services/studySessionService.ts; src/services/wordBookService.ts; src/services/wordProgressService.ts; src/storage/localStorage.ts; src/styles.css
-Specific Changes Made: Built and copied the latest Android debug APK to artifacts/SwipeWord-debug.apk; prepared the accumulated SwipeWord UI, progress, settings, study-session, and word-book changes for repository submission; intentionally left artifacts/SwipeWord-release-unsigned.apk untracked.
-Commands or Tests Run: npm run android:debug; Copy-Item android/app/build/outputs/apk/debug/app-debug.apk artifacts/SwipeWord-debug.apk; git add selected source/data/APK paths; git commit -m "Polish SwipeWord study UI and word books"
+Specific Changes Made: Built and copied the latest Android debug APK to artifacts/SwipeWord-debug.apk; committed and pushed the accumulated SwipeWord UI, progress, settings, study-session, and word-book changes; intentionally left artifacts/SwipeWord-release-unsigned.apk untracked.
+Commands or Tests Run: npm run android:debug; Copy-Item android/app/build/outputs/apk/debug/app-debug.apk artifacts/SwipeWord-debug.apk; git add selected source/data/APK paths; git commit -m "Polish SwipeWord study UI and word books"; git push origin main
 Test Results: Android debug build passed; artifact size 4,775,377 bytes. Vite still reports the expected large chunk warning from embedded wordlists.
-Current Problems or Risks: APK was packaged but not installed/tested on a device in this turn; push authentication is assumed to be available from the local Git environment.
-Next Step If Interrupted: If the amend/push did not finish, run git status, amend this finalized handoff if needed, then push origin/main.
+Current Problems or Risks: APK was packaged but not installed/tested on a device in this turn; artifacts/SwipeWord-release-unsigned.apk remains untracked because release packaging was not requested.
+Next Step If Interrupted: Install artifacts/SwipeWord-debug.apk on an Android device/emulator and verify the latest top progress and settings-back behavior.
 
 ### 2026-05-27 14:21 +08:00 - Codex - completed
 
