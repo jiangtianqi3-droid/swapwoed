@@ -2,6 +2,8 @@ export type AppSettings = {
   dailyNewCount: number;
   dailyReviewLimit: number | "unlimited";
   prioritizeWeakWords: boolean;
+  wordOrder: "sequential" | "random";
+  shuffleLearning: boolean;
   autoPronounce: boolean;
   accent: "en-US" | "en-GB";
   speechRate: 0.85 | 1 | 1.15;
@@ -31,6 +33,8 @@ export const defaultSettings: AppSettings = {
   dailyNewCount: 20,
   dailyReviewLimit: "unlimited",
   prioritizeWeakWords: true,
+  wordOrder: "sequential",
+  shuffleLearning: false,
   autoPronounce: false,
   accent: "en-US",
   speechRate: 1,

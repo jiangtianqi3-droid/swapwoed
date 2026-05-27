@@ -15,7 +15,7 @@ export default function SettingsStepper({ value, min, max, step, onChange, label
       <button type="button" onClick={() => onChange(clampValue(value - step))} aria-label={`${label}减少`}>
         −
       </button>
-      <span>{value}</span>
+      <span key={value}>{value}</span>
       <button type="button" onClick={() => onChange(clampValue(value + step))} aria-label={`${label}增加`}>
         +
       </button>

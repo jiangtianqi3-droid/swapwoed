@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BookmarkCheck, Check, CircleHelp, X } from "lucide-react";
 import { exampleTranslations } from "../data/exampleTranslations";
+import type { GestureFeedbackState } from "../models/GestureFeedbackState";
 import type { AppSettings } from "../models/Settings";
 import type { UserWordProgress } from "../models/UserWordProgress";
 import type { Word } from "../models/Word";
@@ -16,6 +17,7 @@ type WordCardProps = {
   dealOnEnter?: boolean;
   onAction: (action: CardStudyAction) => void;
   onToggleFavorite: () => void;
+  onFeedbackChange?: (feedback: GestureFeedbackState) => void;
 };
 
 type Drag = { x: number; y: number };
@@ -53,6 +55,7 @@ const WORD_REVEAL_MEANING_THRESHOLD = 128;
 const PARTIAL_REVEAL_THRESHOLD = 44;
 const EXIT_MS = 520;
 const LEFT_REVEAL_MS = 340;
+const DEAL_SEQUENCE_MS = 1220;
 const TAP_DISTANCE = 8;
 const DOUBLE_TAP_MS = 260;
 const VELOCITY_COMMIT = 0.7;
@@ -80,9 +83,31 @@ const wordTitleSize = (text: string) => {
   return "clamp(1.35rem, 5.8vw, 2.05rem)";
 };
 
+const normalizeText = (value?: string) => value?.trim() ?? "";
+
+const getWordDisplayContent = (word: Word) => {
+  const meaning = normalizeText(word.meaning) || "暂未收录中文释义";
+  const partOfSpeech = normalizeText(word.partOfSpeech) || "词性待补充";
+  const definition = normalizeText(word.definition) || `A vocabulary item related to: ${meaning}.`;
+  const example = word.examples.find((item) => item.trim()) ?? `I am learning the word "${word.word}" today.`;
+  const exampleTranslation = exampleTranslations[word.id] ?? `我今天正在学习 ${word.word} 这个单词。`;
+  const collocations = word.collocations?.filter((item) => item.trim());
+  const memoryHint = normalizeText(word.memoryHint) || `结合中文释义“${meaning}”记忆 ${word.word}。`;
+
+  return {
+    meaning,
+    partOfSpeech,
+    definition,
+    example,
+    exampleTranslation,
+    collocations: collocations?.length ? collocations : [`${word.word} usage`, `${word.word} meaning`],
+    synonyms: word.synonyms?.filter((item) => item.trim()) ?? [],
+    memoryHint,
+  };
+};
+
 const AnswerContent = ({ word, settings }: { word: Word; settings: AppSettings }) => {
-  const example = word.examples[0];
-  const exampleTranslation = exampleTranslations[word.id];
+  const display = getWordDisplayContent(word);
 
   return (
   <>
@@ -92,36 +117,36 @@ const AnswerContent = ({ word, settings }: { word: Word; settings: AppSettings }
           <strong>{word.word}</strong>
           <span>{word.phonetic}</span>
         </div>
-        <h2>{word.meaning}</h2>
-        <p>{word.partOfSpeech}</p>
+        <h2>{display.meaning}</h2>
+        <p>{display.partOfSpeech}</p>
       </div>
     </div>
 
-    {settings.showDefinition && word.definition ? <p className="definition">{word.definition}</p> : null}
-    {settings.showExamples && example ? (
+    {settings.showDefinition ? <p className="definition">{display.definition}</p> : null}
+    {settings.showExamples ? (
       <blockquote>
-        <span>{example}</span>
-        {exampleTranslation ? <cite>{exampleTranslation}</cite> : null}
+        <span>{display.example}</span>
+        <cite>{display.exampleTranslation}</cite>
       </blockquote>
     ) : null}
 
     <div className="detail-grid">
-      {settings.showCollocations && word.collocations?.length ? (
+      {settings.showCollocations ? (
         <div>
           <span>常见搭配</span>
-          <p>{word.collocations.slice(0, 2).join(" / ")}</p>
+          <p>{display.collocations.slice(0, 2).join(" / ")}</p>
         </div>
       ) : null}
-      {settings.showSynonyms && word.synonyms?.length ? (
+      {settings.showSynonyms && display.synonyms.length ? (
         <div>
           <span>近义词</span>
-          <p>{word.synonyms.slice(0, 3).join(" / ")}</p>
+          <p>{display.synonyms.slice(0, 3).join(" / ")}</p>
         </div>
       ) : null}
-      {settings.showMemoryHint && word.memoryHint ? (
+      {settings.showMemoryHint ? (
         <div>
           <span>记忆提示</span>
-          <p>{word.memoryHint}</p>
+          <p>{display.memoryHint}</p>
         </div>
       ) : null}
     </div>
@@ -161,6 +186,7 @@ export default function WordCard({
   dealOnEnter = true,
   onAction,
   onToggleFavorite,
+  onFeedbackChange,
 }: WordCardProps) {
   const [phase, setPhase] = useState<CardPhase>(dealOnEnter ? "dealing" : "idle");
   const [wordDrag, setWordDrag] = useState<Drag>({ x: 0, y: 0 });
@@ -239,7 +265,7 @@ export default function WordCard({
     dragExceededRef.current = false;
     clearHesitation();
     clearClickTimer();
-    if (dealOnEnter) dealTimerRef.current = window.setTimeout(() => setPhase("idle"), 420);
+    if (dealOnEnter) dealTimerRef.current = window.setTimeout(() => setPhase("idle"), DEAL_SEQUENCE_MS);
   }, [word.id]);
 
   useEffect(() => {
@@ -257,6 +283,7 @@ export default function WordCard({
 
   const beginDrag = (event: React.PointerEvent<HTMLElement>, target: "word" | "answer") => {
     if (phase === "exiting" || phase === "dealing") return;
+    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     startRef.current = { x: event.clientX, y: event.clientY };
     currentDeltaRef.current = { x: 0, y: 0 };
@@ -443,6 +470,7 @@ export default function WordCard({
 
   const handlePointerMove = (event: React.PointerEvent<HTMLElement>) => {
     if (!isDragging || gestureCommittedRef.current) return;
+    event.preventDefault();
     const now = performance.now();
     const lastMove = lastMoveRef.current;
     const dt = Math.max(1, now - lastMove.time);
@@ -580,6 +608,7 @@ export default function WordCard({
 
   const handlePointerUp = (event: React.PointerEvent<HTMLElement>) => {
     if (!isDragging && !gestureCommittedRef.current) return;
+    event.preventDefault();
     try {
       event.currentTarget.releasePointerCapture(event.pointerId);
     } catch {
@@ -621,10 +650,43 @@ export default function WordCard({
 
   const rightStrength = clamp(Math.max(stackDrag.x, wordDrag.x) / HORIZONTAL_COMMIT, 0, 1);
   const leftStrength = clamp(Math.max(-stackDrag.x, -wordDrag.x) / HORIZONTAL_COMMIT, 0, 1);
-  const wordRevealAmount = Math.max(peekOffset, wordDrag.y, wordDrag.x < 0 ? -wordDrag.x * 0.92 : 0);
-  const fuzzyStrength = clamp(wordRevealAmount / WORD_REVEAL_MEANING_THRESHOLD, 0, 1);
-  const checkStrength = clamp(rightStrength * (1 - fuzzyStrength), 0, 1);
-  const crossStrength = clamp(leftStrength, 0, 1);
+  const peekStrength = clamp(peekOffset / WORD_REVEAL_MEANING_THRESHOLD, 0, 1);
+  const isFuzzyLocked = hasPeeked || peekRecordedRef.current || phase === "dismissPeekedAnswer";
+  const isKnownCommitted =
+    !isFuzzyLocked &&
+    (phase === "rightCommitted" || (phase === "exiting" && targetRef.current === "word" && stackDrag.x > 0));
+  const isUnknownCommitted = !isFuzzyLocked && (phase === "leftCommitted" || phase === "returningWordToStack" || leftRecordedRef.current);
+  const committedFeedback = isFuzzyLocked ? "fuzzy" : isKnownCommitted ? "known" : isUnknownCommitted ? "unknown" : "none";
+  const previewFeedback =
+    committedFeedback !== "none"
+      ? "none"
+      : peekStrength > 0.04
+        ? "peek"
+        : rightStrength > 0.04
+          ? "known"
+          : leftStrength > 0.04
+            ? "unknown"
+            : "none";
+  const feedbackProgress =
+    committedFeedback !== "none"
+      ? 1
+      : previewFeedback === "peek"
+        ? peekStrength
+        : previewFeedback === "known"
+          ? rightStrength
+          : previewFeedback === "unknown"
+            ? leftStrength
+            : 0;
+  const gestureFeedback: GestureFeedbackState = {
+    preview: previewFeedback,
+    committed: committedFeedback,
+    progress: clamp(feedbackProgress, 0, 1),
+  };
+  const checkStrength = gestureFeedback.committed === "known" ? 1 : gestureFeedback.preview === "known" ? gestureFeedback.progress : 0;
+  const crossStrength = gestureFeedback.committed === "unknown" ? 1 : gestureFeedback.preview === "unknown" ? gestureFeedback.progress : 0;
+  const questionStrength =
+    gestureFeedback.committed === "fuzzy" ? 1 : gestureFeedback.preview === "peek" ? gestureFeedback.progress : 0;
+  const feedbackKind = gestureFeedback.committed !== "none" ? gestureFeedback.committed : gestureFeedback.preview;
   const stackRotation = clamp(stackDrag.x / 18, -12, 12);
   const wordSoloRotation =
     phase === "horizontalDragging" || phase === "leftCommitted" || (phase === "exiting" && wordDrag.x < 0)
@@ -646,6 +708,11 @@ export default function WordCard({
   const isReturningAnswer = phase === "dismissPeekedAnswer" || phase === "returningAnswerToStack";
   const isReturningWord = phase === "returningWordToStack";
   const isDealing = phase === "dealing";
+  const displayContent = getWordDisplayContent(word);
+
+  useEffect(() => {
+    onFeedbackChange?.(gestureFeedback);
+  }, [gestureFeedback.preview, gestureFeedback.committed, gestureFeedback.progress, onFeedbackChange]);
 
   return (
     <div className={`word-card-wrap text-${settings.cardTextSize}`}>
@@ -716,7 +783,7 @@ export default function WordCard({
           </article>
 
           <article
-            className={`word-card-layer word-face ${isDragging && targetRef.current === "word" ? "is-dragging" : ""} ${
+            className={`word-card-layer word-face feedback-${feedbackKind} ${isDragging && targetRef.current === "word" ? "is-dragging" : ""} ${
               phase === "exiting" && targetRef.current === "word" && wordDrag.x < 0 ? "is-exiting" : ""
             } ${isReturningWord ? "is-returning" : ""} ${wordHidden ? "hidden-behind" : ""}`}
             onClick={handleCardClick}
@@ -732,7 +799,7 @@ export default function WordCard({
                 "--word-scale": isReturningWord ? 0.72 : 1,
                 "--check-strength": checkStrength,
                 "--cross-strength": crossStrength,
-                "--fuzzy-strength": fuzzyStrength,
+                "--question-strength": questionStrength,
               } as React.CSSProperties
             }
           >
@@ -764,16 +831,16 @@ export default function WordCard({
 
             <div className={`front-word-content ${showExample ? "with-example" : ""}`}>
               <FrontWordContent word={word} interactive settings={settings} />
-              {showExample && word.examples.length > 0 ? (
+              {showExample ? (
                 <button
                   className="front-example"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    if (settings.tapExamplePronounce) speakText(word.examples[0], settings.accent, settings.speechRate);
+                    if (settings.tapExamplePronounce) speakText(displayContent.example, settings.accent, settings.speechRate);
                   }}
                 >
-                  {word.examples[0]}
+                  {displayContent.example}
                 </button>
               ) : null}
             </div>

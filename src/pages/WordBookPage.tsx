@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { BookOpen, Check } from "lucide-react";
-import { defaultWordBooks } from "../data/defaultWordBooks";
 import { loadProgressMap, loadSettings, saveSettings } from "../storage/localStorage";
+import { getWordBookMetas, getWordsByBookId } from "../services/wordBookService";
 
 export default function WordBookPage() {
   const [settings, setSettings] = useState(() => loadSettings());
   const progressMap = loadProgressMap();
+  const wordBooks = getWordBookMetas();
 
   const updateDailyNewCount = (dailyNewCount: number) => {
     const next = { ...settings, dailyNewCount };
@@ -42,9 +43,10 @@ export default function WordBookPage() {
       </section>
 
       <section className="book-list">
-        {defaultWordBooks.map((book) => {
-          const mastered = book.wordIds.filter((id) => progressMap[id]?.status === "mastered").length;
-          const percent = book.wordIds.length ? Math.round((mastered / book.wordIds.length) * 100) : 0;
+        {wordBooks.map((book) => {
+          const wordIds = getWordsByBookId(book.id).map((word) => word.id);
+          const mastered = wordIds.filter((id) => progressMap[id]?.status === "mastered").length;
+          const percent = wordIds.length ? Math.round((mastered / wordIds.length) * 100) : 0;
           const isActive = book.id === settings.selectedBookId;
 
           return (
@@ -52,7 +54,7 @@ export default function WordBookPage() {
               key={book.id}
               className={`book-item ${isActive ? "active" : ""}`}
               onClick={() => switchBook(book.id)}
-              disabled={book.isCustom}
+              disabled={!book.builtIn}
             >
               <div>
                 <strong>{book.name}</strong>
@@ -61,7 +63,7 @@ export default function WordBookPage() {
                   <i style={{ width: `${percent}%` }} />
                 </div>
                 <small>
-                  {book.wordIds.length || "即将支持"} 词 · 当前进度 {percent}%
+                  {wordIds.length || "即将支持"} 词 · 当前进度 {percent}%
                 </small>
               </div>
               {isActive ? <Check size={22} /> : null}

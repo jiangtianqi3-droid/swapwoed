@@ -1,6 +1,7 @@
 import type { Word } from "../models/Word";
+import { downloadedWords } from "./downloadedWords";
 
-export const words: Word[] = [
+const curatedWords: Word[] = [
   {
     id: "abandon",
     word: "abandon",
@@ -1107,5 +1108,7 @@ export const words: Word[] = [
     tags: ["cet6", "postgraduate", "ielts"],
   },
 ];
+
+export const words: Word[] = [...curatedWords, ...downloadedWords];
 
 export const wordById = new Map(words.map((word) => [word.id, word]));

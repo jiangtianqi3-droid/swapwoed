@@ -1,18 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { RotateCcw, Settings } from "lucide-react";
+import StudyProgressMarks from "../components/StudyProgressMarks";
 import WordCard, { type CardStudyAction } from "../components/WordCard";
+import { wordById } from "../data/words";
+import { idleGestureFeedback, type GestureFeedbackState } from "../models/GestureFeedbackState";
 import type { Word } from "../models/Word";
 import type { SwipeAction } from "../models/ReviewLog";
 import { loadProgressMap, loadSettings, saveLastSummary, type StudySummary } from "../storage/localStorage";
 import {
-  getTodayStudyQueue,
   handleSwipe,
   toggleFavorite,
   undoSwipe,
   type StudyMode,
   type SwipeResult,
 } from "../services/wordProgressService";
+import {
+  getOrCreateStudySession,
+  setStudySessionIndex,
+  setStudySessionQueue,
+} from "../services/studySessionService";
 
 type UndoEntry = {
   result: SwipeResult;
@@ -65,26 +72,77 @@ const summaryAfterUndo = (summary: StudySummary, entry: UndoEntry): StudySummary
 export default function StudyPage() {
   const params = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const mode = ((params.mode as StudyMode | undefined) ?? "today") in modeTitle ? ((params.mode as StudyMode) ?? "today") : "today";
-  const [queue, setQueue] = useState(() => getTodayStudyQueue(mode));
+  const [queueIds, setQueueIds] = useState(() => getOrCreateStudySession(mode).queueWordIds);
   const [progressMap, setProgressMap] = useState(() => loadProgressMap());
-  const [settings] = useState(() => loadSettings());
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [settings, setSettings] = useState(() => loadSettings());
+  const [currentIndex, setCurrentIndexState] = useState(() => getOrCreateStudySession(mode).currentIndex);
   const [, setUndoStack] = useState<UndoEntry[]>([]);
   const [summary, setSummary] = useState<StudySummary>(emptySummary);
   const [recall, setRecall] = useState<RecallEntry | null>(null);
   const [recallEnteringWordId, setRecallEnteringWordId] = useState<string | null>(null);
   const [dealOnNextCard, setDealOnNextCard] = useState(true);
+  const [gestureFeedback, setGestureFeedback] = useState<GestureFeedbackState>(idleGestureFeedback);
   const summaryRef = useRef(summary);
 
+  const queue = useMemo(
+    () => queueIds.map((id) => wordById.get(id)).filter((word): word is Word => Boolean(word)),
+    [queueIds],
+  );
   const currentWord = queue[currentIndex];
   const stackWords = queue.slice(currentIndex + 1, currentIndex + 7);
   const currentProgress = currentWord ? progressMap[currentWord.id] : null;
-  const visibleProgress = Math.min(queue.length, Math.max(currentIndex + 1, summary.studiedCount + 1));
+
+  const setCurrentIndex = (nextIndex: number | ((value: number) => number)) => {
+    setCurrentIndexState((value) => {
+      const resolved = typeof nextIndex === "function" ? nextIndex(value) : nextIndex;
+      setStudySessionIndex(resolved);
+      return resolved;
+    });
+  };
+
+  const replaceQueueIds = (nextIds: string[], nextIndex = currentIndex) => {
+    setQueueIds(nextIds);
+    setStudySessionQueue(nextIds, nextIndex);
+  };
 
   useEffect(() => {
     summaryRef.current = summary;
   }, [summary]);
+
+  useEffect(() => {
+    const nextSession = getOrCreateStudySession(mode);
+    setQueueIds(nextSession.queueWordIds);
+    setCurrentIndexState(nextSession.currentIndex);
+  }, [mode]);
+
+  useEffect(() => {
+    const onSettingsChanged = () => setSettings(loadSettings());
+    const onSessionCleared = () => {
+      const nextSession = getOrCreateStudySession(mode);
+      setQueueIds(nextSession.queueWordIds);
+      setCurrentIndexState(nextSession.currentIndex);
+      setProgressMap(loadProgressMap());
+      setSummary(emptySummary);
+      summaryRef.current = emptySummary;
+      setRecall(null);
+      setDealOnNextCard(true);
+    };
+
+    window.addEventListener("swipeword:settings-changed", onSettingsChanged);
+    window.addEventListener("swipeword:study-session-cleared", onSessionCleared);
+    return () => {
+      window.removeEventListener("swipeword:settings-changed", onSettingsChanged);
+      window.removeEventListener("swipeword:study-session-cleared", onSessionCleared);
+    };
+  }, [mode]);
+
+  useEffect(() => {
+    if (location.pathname === "/settings") return;
+    document.body.classList.add("study-scroll-locked");
+    return () => document.body.classList.remove("study-scroll-locked");
+  }, [location.pathname]);
 
   const nextReviewAt = useMemo(() => {
     const dates = Object.values(progressMap)
@@ -102,6 +160,7 @@ export default function StudyPage() {
 
   const advanceQueue = (nextSummary: StudySummary, newestReviewAt?: string) => {
     const nextIndex = currentIndex + 1;
+    setGestureFeedback(idleGestureFeedback);
     setCurrentIndex(nextIndex);
     if (nextIndex >= queue.length) finishSession(nextSummary, newestReviewAt);
   };
@@ -144,11 +203,9 @@ export default function StudyPage() {
     }
 
     setDealOnNextCard(false);
-    setQueue((value) => {
-      const completed = value.slice(0, currentIndex);
-      const remaining = value.slice(currentIndex + 1).filter((word) => word.id !== currentWord.id);
-      return [...completed, ...remaining, currentWord];
-    });
+    const completed = queueIds.slice(0, currentIndex);
+    const remaining = queueIds.slice(currentIndex + 1).filter((id) => id !== currentWord.id);
+    replaceQueueIds([...completed, ...remaining, currentWord.id], currentIndex);
   };
 
   const undoEntry = (last: UndoEntry, options?: { restoreToCurrent?: boolean }) => {
@@ -158,15 +215,9 @@ export default function StudyPage() {
     setProgressMap((map) => ({ ...map, [last.result.wordId]: last.result.previousProgress }));
     if (last.countedInSummary) setSummary((value) => summaryAfterUndo(value, last));
     if (options?.restoreToCurrent) {
-      setQueue((value) => {
-        const completed = value.slice(0, currentIndex);
-        const remaining = value.slice(currentIndex).filter((word) => word.id !== last.word.id);
-        return [
-          ...completed,
-          last.word,
-          ...remaining,
-        ];
-      });
+      const completed = queueIds.slice(0, currentIndex);
+      const remaining = queueIds.slice(currentIndex).filter((id) => id !== last.word.id);
+      replaceQueueIds([...completed, last.word.id, ...remaining], currentIndex);
       setDealOnNextCard(true);
       setRecallEnteringWordId(last.word.id);
       window.setTimeout(() => {
@@ -229,12 +280,15 @@ export default function StudyPage() {
   return (
     <div className="page study-page">
       <header className="study-topbar">
-        <div>
-          <strong>
-            {visibleProgress} / {queue.length}
-          </strong>
-        </div>
-        <Link className="top-icon-link" to="/settings" aria-label="设置">
+        <StudyProgressMarks
+          bookId={settings.selectedBookId}
+          currentWordId={currentWord.id}
+          todayCompletedCount={currentIndex}
+          todayMaxWordCount={queueIds.length}
+          progressMap={progressMap}
+          feedback={gestureFeedback}
+        />
+        <Link className="top-icon-link" to="/settings" state={{ backgroundLocation: location }} aria-label="设置">
           <Settings size={19} />
         </Link>
       </header>
@@ -249,6 +303,7 @@ export default function StudyPage() {
         dealOnEnter={dealOnNextCard || recallEnteringWordId === currentWord.id}
         onAction={onCardAction}
         onToggleFavorite={onToggleFavorite}
+        onFeedbackChange={setGestureFeedback}
       />
 
       {settings.rightSwipeRecallBar && recall && Date.now() < recall.expiresAt ? (
@@ -266,9 +321,9 @@ export default function StudyPage() {
 
       {settings.bottomGestureHint ? (
         <div className="gesture-ghost" aria-hidden="true">
-          <span>←────</span>
-          <i />
-          <span>────→</span>
+          <span className="gesture-arrow gesture-arrow-left" />
+          <i className="gesture-dot" />
+          <span className="gesture-arrow gesture-arrow-right" />
         </div>
       ) : null}
     </div>

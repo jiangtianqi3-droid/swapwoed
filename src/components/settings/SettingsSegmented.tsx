@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 type Option<T extends string | number> = {
   label: string;
   value: T;
@@ -16,8 +18,18 @@ export default function SettingsSegmented<T extends string | number>({
   onChange,
   ariaLabel,
 }: SettingsSegmentedProps<T>) {
+  const activeIndex = Math.max(0, options.findIndex((option) => option.value === value));
+
   return (
-    <div className="settings-segmented" role="radiogroup" aria-label={ariaLabel}>
+    <div
+      className="settings-segmented"
+      role="radiogroup"
+      aria-label={ariaLabel}
+      style={{
+        "--segment-count": options.length,
+        "--segment-index": activeIndex,
+      } as CSSProperties}
+    >
       {options.map((option) => (
         <button
           className={option.value === value ? "active" : ""}

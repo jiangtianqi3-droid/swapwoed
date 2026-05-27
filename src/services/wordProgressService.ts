@@ -1,4 +1,3 @@
-import { defaultWordBooks } from "../data/defaultWordBooks";
 import { wordById, words } from "../data/words";
 import type { SwipeAction } from "../models/ReviewLog";
 import type { AppSettings } from "../models/Settings";
@@ -12,6 +11,7 @@ import {
 } from "../storage/localStorage";
 import { isDue } from "../utils/dateUtils";
 import { applySwipeToProgress } from "./reviewScheduler";
+import { getWordIdsByBookId } from "./wordBookService";
 
 export type SwipeResult = {
   wordId: string;
@@ -23,13 +23,24 @@ export type SwipeResult = {
 export type StudyMode = "today" | "new" | "review" | "weak";
 
 const selectedBookWordIds = (settings: AppSettings) => {
-  const book = defaultWordBooks.find((item) => item.id === settings.selectedBookId) ?? defaultWordBooks[0];
-  return book.wordIds.length > 0 ? book.wordIds : words.map((word) => word.id);
+  const ids = getWordIdsByBookId(settings.selectedBookId);
+  return ids.length > 0 ? ids : words.map((word) => word.id);
 };
 
-export const getTodayStudyQueue = (mode: StudyMode = "today") => {
-  const settings = loadSettings();
-  const progressMap = loadProgressMap();
+const shuffleWords = <T>(items: T[]) => {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+};
+
+export const buildStudyQueueIds = (
+  mode: StudyMode = "today",
+  settings: AppSettings = loadSettings(),
+  progressMap: Record<string, UserWordProgress> = loadProgressMap(),
+) => {
   const bookIds = selectedBookWordIds(settings);
   const now = new Date();
 
@@ -38,7 +49,8 @@ export const getTodayStudyQueue = (mode: StudyMode = "today") => {
     return progress.status !== "new" && progress.status !== "mastered" && isDue(progress.nextReviewAt, now);
   });
 
-  const newWords = bookIds.filter((id) => progressMap[id].status === "new").slice(0, settings.dailyNewCount);
+  const availableNewWords = bookIds.filter((id) => progressMap[id].status === "new");
+  const newWords = (settings.wordOrder === "random" ? shuffleWords(availableNewWords) : availableNewWords).slice(0, settings.dailyNewCount);
   const weakWords = bookIds.filter((id) => {
     const progress = progressMap[id];
     return progress.status === "weak" || progress.wrongCount >= 2;
@@ -53,9 +65,17 @@ export const getTodayStudyQueue = (mode: StudyMode = "today") => {
           ? weakWords
           : [...dueReview, ...newWords];
 
-  return Array.from(new Set(queueIds))
+  return Array.from(new Set(queueIds));
+};
+
+export const getTodayStudyQueue = (mode: StudyMode = "today") => {
+  const settings = loadSettings();
+  const progressMap = loadProgressMap();
+  const queueIds = buildStudyQueueIds(mode, settings, progressMap);
+  const queue = queueIds
     .map((id) => wordById.get(id))
     .filter((word): word is NonNullable<typeof word> => Boolean(word));
+  return queue;
 };
 
 export const handleSwipe = (wordId: string, action: SwipeAction): SwipeResult => {

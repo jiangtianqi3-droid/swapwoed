@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 type ConfirmDialogProps = {
   title: string;
   description: string;
@@ -15,16 +17,23 @@ export default function ConfirmDialog({
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
+  const [closing, setClosing] = useState(false);
+
+  const closeWithAnimation = (callback: () => void) => {
+    setClosing(true);
+    window.setTimeout(callback, 170);
+  };
+
   return (
-    <div className="confirm-backdrop" role="presentation" onClick={onCancel}>
+    <div className={`confirm-backdrop ${closing ? "is-closing" : ""}`} role="presentation" onClick={() => closeWithAnimation(onCancel)}>
       <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onClick={(event) => event.stopPropagation()}>
         <h2 id="confirm-title">{title}</h2>
         <p>{description}</p>
         <div className="confirm-actions">
-          <button className="confirm-cancel" type="button" onClick={onCancel}>
+          <button className="confirm-cancel" type="button" onClick={() => closeWithAnimation(onCancel)}>
             取消
           </button>
-          <button className={`confirm-ok ${tone === "danger" ? "danger" : ""}`} type="button" onClick={onConfirm}>
+          <button className={`confirm-ok ${tone === "danger" ? "danger" : ""}`} type="button" onClick={() => closeWithAnimation(onConfirm)}>
             {confirmLabel}
           </button>
         </div>

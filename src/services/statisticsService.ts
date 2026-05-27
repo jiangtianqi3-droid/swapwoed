@@ -1,15 +1,15 @@
-import { defaultWordBooks } from "../data/defaultWordBooks";
 import { words } from "../data/words";
 import { loadProgressMap, loadReviewLogs, loadSettings } from "../storage/localStorage";
 import { isDue, sameLocalDay } from "../utils/dateUtils";
+import { getWordBookById, getWordIdsByBookId } from "./wordBookService";
 
 export const getStatistics = () => {
   const progressMap = loadProgressMap();
   const logs = loadReviewLogs();
   const settings = loadSettings();
   const today = new Date();
-  const selectedBook = defaultWordBooks.find((book) => book.id === settings.selectedBookId) ?? defaultWordBooks[0];
-  const selectedIds = selectedBook.wordIds.length > 0 ? selectedBook.wordIds : words.map((word) => word.id);
+  const selectedBook = getWordBookById(settings.selectedBookId);
+  const selectedIds = getWordIdsByBookId(settings.selectedBookId);
 
   const todayLogs = logs.filter((log) => sameLocalDay(new Date(log.reviewedAt), today));
   const masteredCount = selectedIds.filter((id) => progressMap[id].status === "mastered").length;
